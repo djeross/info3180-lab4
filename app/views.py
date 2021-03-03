@@ -6,8 +6,9 @@ This file creates your application.
 """
 import os
 from app import app
-from flask import render_template, request, redirect, url_for, flash, session, abort
+from flask import render_template, request, redirect, url_for, flash, session, abort, send_from_directory
 from werkzeug.utils import secure_filename
+from .forms import UploadForm
 
 
 ###
@@ -19,28 +20,56 @@ def home():
     """Render website's home page."""
     return render_template('home.html')
 
-
 @app.route('/about/')
 def about():
     """Render the website's about page."""
     return render_template('about.html', name="Mary Jane")
 
 
+def allowed_file(filename):
+    parts=filename.split('.')
+    return parts[1].lower() in app.config['VALID_EXTENSIONS']
+
 @app.route('/upload', methods=['POST', 'GET'])
 def upload():
     if not session.get('logged_in'):
         abort(401)
-
-    # Instantiate your form class
-
-    # Validate file upload on submit
+    imageform=UploadForm()
     if request.method == 'POST':
-        # Get file data and save to your uploads folder
+        if imageform.validate_on_submit() and allowed_file(secure_filename(imageform.image.data.filename)):
+            # Get file data and save to your uploads folder
+            img = imageform.image.data
+            filename = secure_filename(img.filename)
+            img.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            flash('File Saved', 'success')
+            return redirect(url_for('home'))
+        else:
+            flash('File not submitted. Please upload a jpg or png file', category='warning')
+    return render_template('upload.html',form=imageform)
 
-        flash('File Saved', 'success')
-        return redirect(url_for('home'))
 
-    return render_template('upload.html')
+def get_uploaded_images():
+    images=[]
+    rootdir = os.getcwd()
+    for subdir, dirs, files in os.walk(rootdir + '/uploads'):
+        for file in files:
+            images.append( file)
+    return images
+
+
+
+@app.route('/uploads/<filename>')
+def get_image(filename):
+    root_dir = os.getcwd()
+    return send_from_directory(os.path.join(root_dir,app.config['UPLOAD_FOLDER']),filename)
+
+@app.route('/files')
+def files():
+    if not session.get('logged_in'):
+        abort(401)
+    return render_template('files.html',allimages=get_uploaded_images()[1:])
+
+
 
 
 @app.route('/login', methods=['POST', 'GET'])
@@ -51,7 +80,6 @@ def login():
             error = 'Invalid username or password'
         else:
             session['logged_in'] = True
-            
             flash('You were logged in', 'success')
             return redirect(url_for('upload'))
     return render_template('login.html', error=error)
@@ -77,11 +105,15 @@ def flash_errors(form):
                 error
 ), 'danger')
 
+
 @app.route('/<file_name>.txt')
 def send_text_file(file_name):
     """Send your static text file."""
     file_dot_text = file_name + '.txt'
     return app.send_static_file(file_dot_text)
+
+
+
 
 
 @app.after_request

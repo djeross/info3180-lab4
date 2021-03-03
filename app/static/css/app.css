@@ -1,3 +1,13 @@
 body {
     padding-top: 5rem;
 }
+.imagecontainer{
+    display: grid;
+    grid-template-columns: repeat(3, 3fr);
+    grid-gap: 15px;
+}
+
+.images{
+    width: 350px;
+    height: 300px;
+}

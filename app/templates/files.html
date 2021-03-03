@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+
+{% block main %}
+
+<div class="imagecontainer">
+{% with paths= allimages%}
+  {%if paths==[]%}
+    <p>There are no images to be displayed</p>
+  {%endif%}
+  {% for url in paths%}
+    <img src="{{url_for('get_image',filename=url)}}" class="images">
+  {% endfor %}
+{% endwith %}
+</div>
+
+{% endblock %}
